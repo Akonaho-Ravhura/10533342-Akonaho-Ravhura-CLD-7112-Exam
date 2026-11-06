@@ -1,5 +1,6 @@
 @{
     ViewData["Title"] = "AgriStreamIOT";
+    ViewData["BodyClass"] = "page-home";
 }
 
 <div class="agri-home">
@@ -11,7 +12,18 @@
                 Bring your farm’s data together. Monitor conditions, understand
                 what your crops need, and make confident decisions from one place.
             </p>
-            <a class="agri-button" href="#platform">Explore the platform <span aria-hidden="true">↗</span></a>
+            <div class="d-flex flex-wrap align-items-center gap-2">
+                <a class="agri-button" href="#platform">Explore the platform <span aria-hidden="true">↗</span></a>
+                @if (User.Identity?.IsAuthenticated == true)
+                {
+                    <a class="btn btn-orange" asp-controller="Account" asp-action="Dashboard">Go to my dashboard</a>
+                }
+                else
+                {
+                    <a class="btn btn-orange" asp-controller="Account" asp-action="Register">Create account</a>
+                    <a class="btn btn-outline-secondary" asp-controller="Account" asp-action="Login">Log in</a>
+                }
+            </div>
             <div class="agri-proof"><span>●</span> Better insights for every growing season</div>
         </div>
 

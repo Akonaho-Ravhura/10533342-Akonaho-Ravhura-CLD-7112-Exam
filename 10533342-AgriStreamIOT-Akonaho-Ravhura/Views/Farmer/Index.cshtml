@@ -1,0 +1,32 @@
+@model List<FieldSummaryViewModel>
+@{
+    ViewData["Title"] = "My farms";
+    var farms = (List<Farm>)ViewBag.Farms;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3 mb-0">My farms</h1>
+    <a class="btn btn-success" asp-action="CreateFarm">Add farm</a>
+</div>
+
+@if (farms.Count == 0)
+{
+    <div class="alert alert-info">You have no farms yet. <a asp-action="CreateFarm">Add your first farm</a> to start recording sensor and drone data.</div>
+}
+
+<div class="row g-3 mb-4">
+    @foreach (var f in farms)
+    {
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100"><div class="card-body">
+                <h2 class="h5 card-title mb-1">@f.Name</h2>
+                <div class="text-muted small mb-2">@f.Location @(f.SizeHectares != null ? $"· {f.SizeHectares:0.##} ha" : "")</div>
+                <div class="small">Agronomist: @(f.Agronomist?.FullName ?? "not assigned yet")</div>
+                <a class="btn btn-sm btn-outline-success mt-2" asp-action="CreateField" asp-route-farmId="@f.Id">Add field</a>
+            </div></div>
+        </div>
+    }
+</div>
+
+<h2 class="h5">Field status</h2>
+<partial name="_FieldSummaryTable" model="Model" />

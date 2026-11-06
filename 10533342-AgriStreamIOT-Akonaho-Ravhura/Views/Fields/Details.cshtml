@@ -1,0 +1,176 @@
+@model FieldDetailsViewModel
+@{
+    var f = Model.Field;
+    ViewData["Title"] = f.Name;
+    var days = (int)ViewBag.Days;
+    string Health(CropHealthStatus h) => h switch
+    {
+        CropHealthStatus.Healthy => "bg-success",
+        CropHealthStatus.AtRisk => "bg-warning text-dark",
+        _ => "bg-danger"
+    };
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+    <div>
+        <h1 class="h3 mb-1">@f.Name <small class="text-muted fs-6">@f.CropType</small></h1>
+        <div class="text-muted small">
+            @f.Farm!.Name · Farmer: @f.Farm.Farmer?.FullName · Agronomist: @(f.Farm.Agronomist?.FullName ?? "not assigned")
+            @if (f.AreaHectares != null) { <span>· @f.AreaHectares?.ToString("0.##") ha</span> }
+            @if (f.PlantedOn != null) { <span>· planted @f.PlantedOn?.ToString("yyyy-MM-dd")</span> }
+        </div>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+        @if (Model.CanEdit)
+        {
+            <a class="btn btn-success" asp-controller="Farmer" asp-action="RecordReading" asp-route-fieldId="@f.Id">Record reading</a>
+            <a class="btn btn-outline-success" asp-controller="Farmer" asp-action="AddDroneImage" asp-route-fieldId="@f.Id">Add drone image</a>
+            <a class="btn btn-outline-secondary" asp-controller="Farmer" asp-action="AddDevice" asp-route-fieldId="@f.Id">Register device</a>
+        }
+        @if (Model.CanAdvise)
+        {
+            <a class="btn btn-success" asp-controller="Agronomist" asp-action="CreateRecommendation" asp-route-fieldId="@f.Id">Write recommendation</a>
+        }
+    </div>
+</div>
+
+<div class="mb-3">
+    Period:
+    @foreach (var d in new[] { 1, 7, 30, 90 })
+    {
+        <a class="btn btn-sm @(d == days ? "btn-dark" : "btn-outline-dark")" asp-route-id="@f.Id" asp-route-days="@d">@(d == 1 ? "24h" : $"{d} days")</a>
+    }
+</div>
+
+@* ---------- Averages ---------- *@
+<div class="row g-3 mb-4">
+    @foreach (var (label, value, unit) in new (string, decimal?, string)[] {
+        ("Soil density", Model.Avg(r => r.SoilDensity, Model.SoilReadings), "g/cm³"),
+        ("Soil moisture", Model.Avg(r => r.SoilMoisture, Model.SoilReadings), "%"),
+        ("Soil pH", Model.Avg(r => r.SoilPh, Model.SoilReadings), ""),
+        ("Nitrogen", Model.Avg(r => r.Nitrogen, Model.SoilReadings), "mg/kg"),
+        ("Phosphorus", Model.Avg(r => r.Phosphorus, Model.SoilReadings), "mg/kg"),
+        ("Potassium", Model.Avg(r => r.Potassium, Model.SoilReadings), "mg/kg"),
+        ("Humidity", Model.Avg(r => r.Humidity, Model.HumidityReadings), "%"),
+        ("Temperature", Model.Avg(r => r.Temperature, Model.HumidityReadings), "°C") })
+    {
+        <div class="col-6 col-md-3">
+            <div class="card stat-card text-center h-100"><div class="card-body py-2">
+                <div class="h4 mb-0">@(value?.ToString("0.##") ?? "—") <small class="fs-6 text-muted">@(value != null ? unit : "")</small></div>
+                <div class="small text-muted">Avg @label.ToLower()</div>
+            </div></div>
+        </div>
+    }
+</div>
+
+@* ---------- Recommendations ---------- *@
+<h2 class="h5">Agronomist recommendations</h2>
+@if (Model.Recommendations.Count == 0)
+{
+    <p class="text-muted">No recommendations yet.</p>
+}
+@foreach (var r in Model.Recommendations)
+{
+    <div class="card mb-2 @(r.IsAcknowledged ? "opacity-75" : "")"><div class="card-body">
+        <div class="d-flex justify-content-between flex-wrap gap-2">
+            <div>
+                <strong>@r.Title</strong>
+                <span class="badge @Health(r.CropHealth) ms-1">@r.CropHealth</span>
+                <span class="badge bg-secondary">@r.Priority priority</span>
+                @if (r.ExpectedYieldTonsPerHectare != null) { <span class="badge bg-light text-dark border">Expected yield @r.ExpectedYieldTonsPerHectare?.ToString("0.##") t/ha</span> }
+                @if (r.IsAcknowledged) { <span class="badge bg-success">Actioned</span> }
+            </div>
+            <small class="text-muted">@r.Agronomist?.FullName · @r.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</small>
+        </div>
+        <p class="mb-0 mt-2" style="white-space: pre-line">@r.Details</p>
+        @if (Model.CanEdit && !r.IsAcknowledged)
+        {
+            <form asp-controller="Farmer" asp-action="AcknowledgeRecommendation" asp-route-id="@r.Id" method="post" class="mt-2">
+                <button type="submit" class="btn btn-sm btn-outline-success">Mark as actioned</button>
+            </form>
+        }
+    </div></div>
+}
+
+@* ---------- Drone images ---------- *@
+<h2 class="h5 mt-4">Drone images</h2>
+@if (Model.DroneImages.Count == 0)
+{
+    <p class="text-muted">No drone images yet.</p>
+}
+<div class="row g-3">
+    @foreach (var img in Model.DroneImages)
+    {
+        <div class="col-md-6 col-lg-4">
+            <div class="card drone-card h-100">
+                @{ var src = img.BlobName != null ? Url.Action("Image", "Fields", new { id = img.Id }) : img.ImageUrl; }
+                <a href="@src" target="_blank" rel="noopener"><img src="@src" class="card-img-top" alt="Drone image of @f.Name" loading="lazy" /></a>
+                <div class="card-body small">
+                    <div>@img.CapturedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm") @(img.Device != null ? $"· {img.Device.Name}" : "")</div>
+                    @if (img.Ndvi != null) { <div>NDVI: <strong>@img.Ndvi?.ToString("0.00")</strong></div> }
+                    @if (!string.IsNullOrEmpty(img.Notes)) { <div class="text-muted">@img.Notes</div> }
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@* ---------- Readings ---------- *@
+<h2 class="h5 mt-4">Soil readings</h2>
+<div class="table-responsive">
+<table class="table table-sm table-striped">
+    <thead><tr><th>When</th><th>Sensor</th><th>Density</th><th>Moisture %</th><th>pH</th><th>N</th><th>P</th><th>K</th></tr></thead>
+    <tbody>
+    @foreach (var r in Model.SoilReadings)
+    {
+        <tr>
+            <td>@r.RecordedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</td><td>@r.Device?.Name</td>
+            <td>@r.SoilDensity</td><td>@r.SoilMoisture</td><td>@r.SoilPh</td>
+            <td>@r.Nitrogen</td><td>@r.Phosphorus</td><td>@r.Potassium</td>
+        </tr>
+    }
+    @if (Model.SoilReadings.Count == 0) { <tr><td colspan="8" class="text-muted text-center">No soil readings in this period.</td></tr> }
+    </tbody>
+</table>
+</div>
+
+<h2 class="h5 mt-4">Humidity readings</h2>
+<div class="table-responsive">
+<table class="table table-sm table-striped">
+    <thead><tr><th>When</th><th>Sensor</th><th>Humidity %</th><th>Temperature °C</th></tr></thead>
+    <tbody>
+    @foreach (var r in Model.HumidityReadings)
+    {
+        <tr><td>@r.RecordedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</td><td>@r.Device?.Name</td><td>@r.Humidity</td><td>@r.Temperature</td></tr>
+    }
+    @if (Model.HumidityReadings.Count == 0) { <tr><td colspan="4" class="text-muted text-center">No humidity readings in this period.</td></tr> }
+    </tbody>
+</table>
+</div>
+
+@* ---------- Devices ---------- *@
+<h2 class="h5 mt-4">IoT devices</h2>
+<div class="table-responsive">
+<table class="table table-sm align-middle">
+    <thead><tr><th>Name</th><th>Type</th><th>Serial</th><th>Installed</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+    @foreach (var d in Model.Devices)
+    {
+        <tr>
+            <td>@d.Name</td><td>@d.DeviceType</td><td><code>@d.SerialNumber</code></td>
+            <td>@d.InstalledOn.ToString("yyyy-MM-dd")</td>
+            <td><span class="badge @(d.IsActive ? "bg-success" : "bg-secondary")">@(d.IsActive ? "Active" : "Inactive")</span></td>
+            <td class="text-end">
+                @if (Model.CanEdit)
+                {
+                    <form asp-controller="Farmer" asp-action="ToggleDevice" asp-route-id="@d.Id" method="post">
+                        <button type="submit" class="btn btn-sm btn-outline-secondary">@(d.IsActive ? "Deactivate" : "Activate")</button>
+                    </form>
+                }
+            </td>
+        </tr>
+    }
+    @if (Model.Devices.Count == 0) { <tr><td colspan="6" class="text-muted text-center">No devices registered on this field.</td></tr> }
+    </tbody>
+</table>
+</div>

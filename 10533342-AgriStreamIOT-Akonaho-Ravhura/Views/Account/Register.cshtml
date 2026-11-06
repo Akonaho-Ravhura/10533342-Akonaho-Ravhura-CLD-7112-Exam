@@ -1,0 +1,97 @@
+@model RegisterViewModel
+@{
+    ViewData["Title"] = "Create account";
+    ViewData["HeroTitle"] = "Grow <span class=\"glow-text\">smarter</span>.";
+    var adminEnabled = ViewBag.AdminRegistrationEnabled as bool? ?? false;
+    var roles = new (string Role, string Blurb, string Icon)[]
+    {
+        (AppRoles.Farmer, "I collect field data", "<path d=\"M12 22V12M5 12c0-4 3-7 7-7s7 3 7 7\"/><path d=\"M2 22h20\"/>"),
+        (AppRoles.Agronomist, "I advise on crops", "<path d=\"M3 3v18h18\"/><path d=\"M7 15l4-4 3 3 5-6\"/>"),
+        (AppRoles.Admin, "I run the system", "<rect x=\"4\" y=\"10\" width=\"16\" height=\"11\" rx=\"2\"/><path d=\"M8 10V7a4 4 0 0 1 8 0v3\"/>")
+    };
+}
+
+<div class="auth-wrap">
+    <partial name="_AuthHero" />
+
+    <section class="auth-panel">
+        <div class="eyebrow mb-2">Join AgriStream</div>
+        <h2>Create your account</h2>
+        <p class="text-muted mb-4">The same sign-up for everyone. Choose your user type.</p>
+
+        <form asp-action="Register" method="post">
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2" role="alert"></div>
+
+            <div class="mb-3">
+                <span class="form-label d-block mb-2">I am a</span>
+                <div class="role-picker" role="radiogroup" aria-label="User type">
+                    @foreach (var r in roles)
+                    {
+                        var id = "role-" + r.Role.ToLower();
+                        <div class="role-option">
+                            <input type="radio" id="@id" name="Role" value="@r.Role" checked="@(Model.Role == r.Role)" />
+                            <label for="@id">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">@Html.Raw(r.Icon)</svg>
+                                @AppRoles.DisplayName(r.Role)
+                                <small>@r.Blurb</small>
+                            </label>
+                        </div>
+                    }
+                </div>
+                <span asp-validation-for="Role" class="small"></span>
+            </div>
+
+            <div class="mb-3" id="adminCodeGroup" hidden>
+                <label asp-for="AdminCode" class="form-label"></label>
+                <input asp-for="AdminCode" class="form-control" autocomplete="off" placeholder="Provided by your organisation" />
+                <div class="form-text">
+                    @(adminEnabled
+                        ? "Administrator sign-up needs the code your organisation gave you."
+                        : "Administrator sign-up is turned off. An existing admin can create your account.")
+                </div>
+                <span asp-validation-for="AdminCode" class="small"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="FullName" class="form-label"></label>
+                <input asp-for="FullName" class="form-control" autocomplete="name" placeholder="Thandi Mokoena" />
+                <span asp-validation-for="FullName" class="small"></span>
+            </div>
+            <div class="mb-3">
+                <label asp-for="Email" class="form-label"></label>
+                <input asp-for="Email" class="form-control" autocomplete="username" placeholder="you@farm.co.za" />
+                <span asp-validation-for="Email" class="small"></span>
+            </div>
+            <div class="row">
+                <div class="col-sm-6 mb-3">
+                    <label asp-for="Password" class="form-label"></label>
+                    <input asp-for="Password" class="form-control" autocomplete="new-password" placeholder="At least 6 characters" />
+                    <span asp-validation-for="Password" class="small"></span>
+                </div>
+                <div class="col-sm-6 mb-3">
+                    <label asp-for="ConfirmPassword" class="form-label"></label>
+                    <input asp-for="ConfirmPassword" class="form-control" autocomplete="new-password" />
+                    <span asp-validation-for="ConfirmPassword" class="small"></span>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-orange w-100 py-2 mt-1">Create account</button>
+        </form>
+
+        <p class="auth-switch">Already have an account? <a asp-action="Login">Log in</a></p>
+    </section>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        (function () {
+            var group = document.getElementById('adminCodeGroup');
+            function sync() {
+                var checked = document.querySelector('input[name="Role"]:checked');
+                group.hidden = !(checked && checked.value === '@AppRoles.Admin');
+            }
+            document.querySelectorAll('input[name="Role"]').forEach(function (r) { r.addEventListener('change', sync); });
+            sync();
+        })();
+    </script>
+}

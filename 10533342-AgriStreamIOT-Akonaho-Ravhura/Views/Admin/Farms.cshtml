@@ -1,0 +1,43 @@
+@model List<FarmListItemViewModel>
+@{
+    ViewData["Title"] = "Farms";
+    var agronomists = (List<SelectListItem>)ViewBag.Agronomists;
+}
+
+<h1 class="h3 mb-1">Farms</h1>
+<p class="text-muted">Assign an agronomist to each farm. An agronomist only sees the data of the farms assigned to them.</p>
+
+<div class="table-responsive">
+<table class="table table-striped align-middle">
+    <thead><tr><th>Farm</th><th>Location</th><th>Size (ha)</th><th>Farmer</th><th>Fields</th><th style="min-width:280px">Agronomist</th></tr></thead>
+    <tbody>
+    @foreach (var f in Model)
+    {
+        <tr>
+            <td>@f.Name</td>
+            <td>@f.Location</td>
+            <td>@f.SizeHectares?.ToString("0.##")</td>
+            <td>@f.FarmerName</td>
+            <td>@f.FieldCount</td>
+            <td>
+                <form asp-action="AssignAgronomist" method="post" class="d-flex gap-2">
+                    <input type="hidden" name="farmId" value="@f.Id" />
+                    <select name="agronomistId" class="form-select form-select-sm">
+                        <option value="">— Unassigned —</option>
+                        @foreach (var a in agronomists)
+                        {
+                            <option value="@a.Value" selected="@(a.Value == f.AgronomistId)">@a.Text</option>
+                        }
+                    </select>
+                    <button type="submit" class="btn btn-sm btn-outline-success">Save</button>
+                </form>
+            </td>
+        </tr>
+    }
+    @if (Model.Count == 0)
+    {
+        <tr><td colspan="6" class="text-center text-muted">No farms yet. Farmers create farms from their dashboard.</td></tr>
+    }
+    </tbody>
+</table>
+</div>

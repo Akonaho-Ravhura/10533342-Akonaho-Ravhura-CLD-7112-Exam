@@ -1,0 +1,39 @@
+@model CreateFieldViewModel
+@{
+    ViewData["Title"] = "Add field";
+}
+
+<div class="row"><div class="col-md-6">
+    <h1 class="h3 mb-1">Add field</h1>
+    <p class="text-muted">Farm: @Model.FarmName</p>
+    <form asp-action="CreateField" method="post">
+        <input type="hidden" asp-for="FarmId" />
+        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+        <div class="mb-3">
+            <label asp-for="Name" class="form-label"></label>
+            <input asp-for="Name" class="form-control" placeholder="e.g. North Block" />
+            <span asp-validation-for="Name" class="text-danger"></span>
+        </div>
+        <div class="mb-3">
+            <label asp-for="CropType" class="form-label"></label>
+            <input asp-for="CropType" class="form-control" placeholder="e.g. Maize" />
+            <span asp-validation-for="CropType" class="text-danger"></span>
+        </div>
+        <div class="row">
+            <div class="col mb-3">
+                <label asp-for="AreaHectares" class="form-label"></label>
+                <input asp-for="AreaHectares" class="form-control" step="0.01" />
+                <span asp-validation-for="AreaHectares" class="text-danger"></span>
+            </div>
+            <div class="col mb-3">
+                <label asp-for="PlantedOn" class="form-label"></label>
+                <input asp-for="PlantedOn" class="form-control" />
+                <span asp-validation-for="PlantedOn" class="text-danger"></span>
+            </div>
+        </div>
+        <button type="submit" class="btn btn-success">Add field</button>
+        <a class="btn btn-link" asp-action="Index">Cancel</a>
+    </form>
+</div></div>
+
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

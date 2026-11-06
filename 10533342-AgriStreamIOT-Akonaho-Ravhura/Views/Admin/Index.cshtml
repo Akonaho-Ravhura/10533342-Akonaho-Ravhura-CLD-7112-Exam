@@ -1,0 +1,48 @@
+@model AdminDashboardViewModel
+@{
+    ViewData["Title"] = "Admin dashboard";
+}
+
+<h1 class="h3 mb-4">Admin dashboard</h1>
+
+<h2 class="h6 text-muted text-uppercase">Users</h2>
+<div class="row g-3 mb-4">
+    @foreach (var (label, count, role) in new[] {
+        ("Administrators", Model.Admins, AppRoles.Admin),
+        ("Farmers", Model.Farmers, AppRoles.Farmer),
+        ("Agronomists", Model.Agronomists, AppRoles.Agronomist) })
+    {
+        <div class="col-md-4">
+            <a class="text-decoration-none text-dark" asp-action="Users" asp-route-role="@role">
+                <div class="card stat-card text-center"><div class="card-body">
+                    <div class="display-6">@count</div><div class="text-muted">@label</div>
+                </div></div>
+            </a>
+        </div>
+    }
+</div>
+
+<h2 class="h6 text-muted text-uppercase">System</h2>
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-2"><a class="text-decoration-none text-dark" asp-action="Farms"><div class="card stat-card text-center"><div class="card-body">
+        <div class="h3 mb-0">@Model.Farms</div><div class="small text-muted">Farms</div></div></div></a></div>
+    <div class="col-6 col-md-2"><a class="text-decoration-none text-dark" asp-action="Farms"><div class="card stat-card text-center @(Model.UnassignedFarms > 0 ? "border-warning" : "")"><div class="card-body">
+        <div class="h3 mb-0">@Model.UnassignedFarms</div><div class="small text-muted">Farms without agronomist</div></div></div></a></div>
+    <div class="col-6 col-md-2"><div class="card stat-card text-center"><div class="card-body">
+        <div class="h3 mb-0">@Model.Fields</div><div class="small text-muted">Fields</div></div></div></div>
+    <div class="col-6 col-md-2"><div class="card stat-card text-center"><div class="card-body">
+        <div class="h3 mb-0">@Model.Devices</div><div class="small text-muted">IoT devices</div></div></div></div>
+    <div class="col-6 col-md-2"><div class="card stat-card text-center"><div class="card-body">
+        <div class="h3 mb-0">@Model.ReadingsLast24h</div><div class="small text-muted">Readings (24h)</div></div></div></div>
+    <div class="col-6 col-md-2"><div class="card stat-card text-center"><div class="card-body">
+        <div class="h3 mb-0">@Model.Recommendations</div><div class="small text-muted">Recommendations</div></div></div></div>
+</div>
+
+<a class="btn btn-success" asp-action="CreateUser">Create user</a>
+<a class="btn btn-outline-success" asp-action="Farms">Assign agronomists</a>
+
+<div class="card mt-4"><div class="card-body small">
+    <div class="eyebrow mb-2">Infrastructure</div>
+    <div><span class="text-muted">Database:</span> @ViewBag.Database</div>
+    <div><span class="text-muted">Image storage:</span> @ViewBag.Storage</div>
+</div></div>

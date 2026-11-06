@@ -1,0 +1,22 @@
+@* Left-hand branding panel shared by the login and registration pages. *@
+<section class="auth-hero">
+    <div>
+        <div class="brand mb-4"><partial name="_Logo" /><span>AgriStream<span class="brand-accent">IoT</span></span></div>
+        <h1>@Html.Raw(ViewData["HeroTitle"] ?? "Your fields, <span class=\"glow-text\">live</span>.")</h1>
+        <p class="lead mt-3">Soil sensors, humidity probes and drone imagery in one place, turned into crop decisions by your agronomist.</p>
+    </div>
+    <ul class="auth-points">
+        <li>
+            <span class="dot"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22V12M5 12c0-4 3-7 7-7s7 3 7 7"/><path d="M2 22h20"/></svg></span>
+            <span><strong>Farmers</strong>Track soil density, N-P-K, pH, moisture and humidity per field.</span>
+        </li>
+        <li>
+            <span class="dot"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg></span>
+            <span><strong>Agronomists</strong>Spot problem fields fast and send crop health and yield advice.</span>
+        </li>
+        <li>
+            <span class="dot"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></span>
+            <span><strong>Administrators</strong>Manage users and match agronomists to farms.</span>
+        </li>
+    </ul>
+</section>

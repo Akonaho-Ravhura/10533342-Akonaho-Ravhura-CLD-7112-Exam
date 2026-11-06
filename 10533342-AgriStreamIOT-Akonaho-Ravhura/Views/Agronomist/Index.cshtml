@@ -1,0 +1,16 @@
+@model List<FieldSummaryViewModel>
+@{
+    ViewData["Title"] = "Field insights";
+}
+
+<h1 class="h3 mb-1">Field insights</h1>
+<p class="text-muted">Latest sensor and drone data from the farms assigned to you. Fields with alerts are listed first.</p>
+
+@if (Model.Count == 0)
+{
+    <div class="alert alert-info">No farms are assigned to you yet. An administrator assigns agronomists to farms.</div>
+}
+else
+{
+    <partial name="_FieldSummaryTable" model="Model" view-data='new ViewDataDictionary(ViewData) { ["ShowFarmer"] = true }' />
+}

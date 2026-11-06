@@ -1,0 +1,43 @@
+@model Recommendation
+@{
+    ViewData["Title"] = "New recommendation";
+    var field = (Field)ViewBag.Field;
+}
+
+<div class="row"><div class="col-md-8">
+    <h1 class="h3 mb-1">New recommendation</h1>
+    <p class="text-muted">Field: @field.Name (@field.Farm?.Name) · <a asp-controller="Fields" asp-action="Details" asp-route-id="@field.Id" target="_blank">open field data</a></p>
+    <form asp-action="CreateRecommendation" method="post">
+        <input type="hidden" asp-for="FieldId" />
+        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+        <div class="mb-3">
+            <label asp-for="Title" class="form-label"></label>
+            <input asp-for="Title" class="form-control" placeholder="e.g. Top-dress nitrogen" />
+            <span asp-validation-for="Title" class="text-danger"></span>
+        </div>
+        <div class="row">
+            <div class="col-md-4 mb-3">
+                <label asp-for="CropHealth" class="form-label"></label>
+                <select asp-for="CropHealth" asp-items="Html.GetEnumSelectList<CropHealthStatus>()" class="form-select"></select>
+            </div>
+            <div class="col-md-4 mb-3">
+                <label asp-for="Priority" class="form-label"></label>
+                <select asp-for="Priority" asp-items="Html.GetEnumSelectList<RecommendationPriority>()" class="form-select"></select>
+            </div>
+            <div class="col-md-4 mb-3">
+                <label asp-for="ExpectedYieldTonsPerHectare" class="form-label"></label>
+                <input asp-for="ExpectedYieldTonsPerHectare" class="form-control" step="0.01" />
+                <span asp-validation-for="ExpectedYieldTonsPerHectare" class="text-danger"></span>
+            </div>
+        </div>
+        <div class="mb-3">
+            <label asp-for="Details" class="form-label"></label>
+            <textarea asp-for="Details" class="form-control" rows="6" placeholder="What the data shows and what the farmer should do."></textarea>
+            <span asp-validation-for="Details" class="text-danger"></span>
+        </div>
+        <button type="submit" class="btn btn-success">Send to farmer</button>
+        <a class="btn btn-link" asp-controller="Fields" asp-action="Details" asp-route-id="@field.Id">Cancel</a>
+    </form>
+</div></div>
+
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

@@ -1,0 +1,30 @@
+@model Farm
+@{
+    ViewData["Title"] = "Add farm";
+}
+
+<div class="row"><div class="col-md-6">
+    <h1 class="h3 mb-3">Add farm</h1>
+    <form asp-action="CreateFarm" method="post">
+        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+        <div class="mb-3">
+            <label asp-for="Name" class="form-label"></label>
+            <input asp-for="Name" class="form-control" />
+            <span asp-validation-for="Name" class="text-danger"></span>
+        </div>
+        <div class="mb-3">
+            <label asp-for="Location" class="form-label"></label>
+            <input asp-for="Location" class="form-control" placeholder="e.g. Polokwane, Limpopo" />
+            <span asp-validation-for="Location" class="text-danger"></span>
+        </div>
+        <div class="mb-3">
+            <label asp-for="SizeHectares" class="form-label"></label>
+            <input asp-for="SizeHectares" class="form-control" step="0.01" />
+            <span asp-validation-for="SizeHectares" class="text-danger"></span>
+        </div>
+        <button type="submit" class="btn btn-success">Create farm</button>
+        <a class="btn btn-link" asp-action="Index">Cancel</a>
+    </form>
+</div></div>
+
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }
