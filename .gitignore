@@ -55,3 +55,66 @@ CodeCoverage/
 *.VisualState.xml
 TestResult.xml
 nunit-*.xml
+
+# ---------------------------------------------------------------
+# Visual Studio / IDEs
+# ---------------------------------------------------------------
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.rsuser
+.vscode/
+!.vscode/extensions.json
+.idea/
+*.DotSettings.user
+
+# Publish output and Azure publish profiles (they can contain credentials)
+[Pp]ublish/
+PublishProfiles/
+*.pubxml
+*.pubxml.user
+*.publishproj
+*.azurePubxml
+
+# ---------------------------------------------------------------
+# Secrets & local configuration (never commit these)
+# Real connection strings live in user-secrets (dev) or Azure App Service settings (prod).
+# ---------------------------------------------------------------
+.env.*
+secrets.json
+appsettings.*.local.json
+appsettings.Local.json
+*.pfx
+*.p12
+
+# ---------------------------------------------------------------
+# Local data
+# ---------------------------------------------------------------
+# Local drone image storage fallback (used when no blob storage is configured)
+**/App_Data/
+# SQLite / SQL Server local database files
+*.db
+*.db-shm
+*.db-wal
+*.mdf
+*.ldf
+# Azurite (local Azure Storage emulator) data
+__azurite_db_*.json
+__blobstorage__/
+__queuestorage__/
+.azurite/
+
+# ---------------------------------------------------------------
+# Tooling
+# ---------------------------------------------------------------
+node_modules/
+# Claude Code worktrees and local settings
+.claude/worktrees/
+.claude/settings.local.json
+# OS files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store
