@@ -1,0 +1,38 @@
+@model IoTDevice
+@{
+    ViewData["Title"] = "Register device";
+    var field = (Field)ViewBag.Field;
+}
+
+<div class="row"><div class="col-md-6">
+    <h1 class="h3 mb-1">Register IoT device</h1>
+    <p class="text-muted">Field: @field.Name (@field.Farm?.Name)</p>
+    <form asp-action="AddDevice" method="post">
+        <input type="hidden" asp-for="FieldId" />
+        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+        <div class="mb-3">
+            <label asp-for="DeviceType" class="form-label"></label>
+            <select asp-for="DeviceType" asp-items="Html.GetEnumSelectList<DeviceType>()" class="form-select"></select>
+            <span asp-validation-for="DeviceType" class="text-danger"></span>
+        </div>
+        <div class="mb-3">
+            <label asp-for="Name" class="form-label"></label>
+            <input asp-for="Name" class="form-control" placeholder="e.g. Soil probe N2" />
+            <span asp-validation-for="Name" class="text-danger"></span>
+        </div>
+        <div class="mb-3">
+            <label asp-for="SerialNumber" class="form-label"></label>
+            <input asp-for="SerialNumber" class="form-control" />
+            <span asp-validation-for="SerialNumber" class="text-danger"></span>
+        </div>
+        <div class="mb-3">
+            <label asp-for="InstalledOn" class="form-label"></label>
+            <input asp-for="InstalledOn" class="form-control" />
+            <span asp-validation-for="InstalledOn" class="text-danger"></span>
+        </div>
+        <button type="submit" class="btn btn-success">Register device</button>
+        <a class="btn btn-link" asp-controller="Fields" asp-action="Details" asp-route-id="@field.Id">Cancel</a>
+    </form>
+</div></div>
+
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

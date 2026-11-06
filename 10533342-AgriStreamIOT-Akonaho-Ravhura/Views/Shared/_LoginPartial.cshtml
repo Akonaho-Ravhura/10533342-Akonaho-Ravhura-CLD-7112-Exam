@@ -1,0 +1,33 @@
+@using Microsoft.AspNetCore.Identity
+@inject UserManager<ApplicationUser> UserManager
+
+<ul class="navbar-nav align-items-md-center gap-1">
+    @if (User.Identity?.IsAuthenticated == true)
+    {
+        var me = await UserManager.GetUserAsync(User);
+        var name = me?.FullName ?? User.Identity.Name ?? "";
+        var initials = string.Concat(name.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(p => char.ToUpperInvariant(p[0])));
+        var role = User.IsInRole(AppRoles.Admin) ? AppRoles.Admin
+                 : User.IsInRole(AppRoles.Agronomist) ? AppRoles.Agronomist
+                 : AppRoles.Farmer;
+        <li class="nav-item">
+            <span class="user-chip">
+                <span class="avatar">@initials</span>
+                <span class="d-flex flex-column lh-sm">
+                    <span>@name</span>
+                    <small class="text-orange">@AppRoles.DisplayName(role)</small>
+                </span>
+            </span>
+        </li>
+        <li class="nav-item">
+            <form asp-controller="Account" asp-action="Logout" method="post" class="d-inline">
+                <button type="submit" class="btn btn-sm btn-outline-secondary">Log out</button>
+            </form>
+        </li>
+    }
+    else
+    {
+        <li class="nav-item"><a class="nav-link" asp-controller="Account" asp-action="Login">Log in</a></li>
+        <li class="nav-item"><a class="btn btn-sm btn-orange ms-md-1" asp-controller="Account" asp-action="Register">Create account</a></li>
+    }
+</ul>

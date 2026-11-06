@@ -1,0 +1,48 @@
+@* Latest IoT status per field. Used on the farmer and agronomist dashboards. *@
+@model List<FieldSummaryViewModel>
+@{
+    var showFarmer = ViewData["ShowFarmer"] as bool? ?? false;
+}
+
+<div class="table-responsive">
+<table class="table table-hover align-middle">
+    <thead>
+        <tr>
+            <th>Field</th>
+            @if (showFarmer) { <th>Farmer</th> }
+            <th>Crop</th>
+            <th title="Latest soil sensor reading">Moisture / density</th>
+            <th title="Nitrogen / Phosphorus / Potassium in mg/kg">N / P / K</th>
+            <th>pH</th>
+            <th>Humidity / temp</th>
+            <th>NDVI</th>
+            <th>Alerts</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+    @foreach (var s in Model)
+    {
+        <tr>
+            <td><strong>@s.FieldName</strong><div class="small text-muted">@s.FarmName · @s.DeviceCount devices</div></td>
+            @if (showFarmer) { <td>@s.FarmerName</td> }
+            <td>@(s.CropType ?? "—")</td>
+            <td>@(s.LatestSoil == null ? "—" : $"{s.LatestSoil.SoilMoisture:0.#}% / {s.LatestSoil.SoilDensity:0.##}")</td>
+            <td>@(s.LatestSoil == null ? "—" : $"{s.LatestSoil.Nitrogen:0} / {s.LatestSoil.Phosphorus:0} / {s.LatestSoil.Potassium:0}")</td>
+            <td>@(s.LatestSoil?.SoilPh?.ToString("0.0") ?? "—")</td>
+            <td>@(s.LatestHumidity == null ? "—" : $"{s.LatestHumidity.Humidity:0}% / {s.LatestHumidity.Temperature:0.#}°C")</td>
+            <td>@(s.LatestNdvi?.ToString("0.00") ?? "—")</td>
+            <td>
+                @foreach (var a in s.Alerts) { <span class="badge bg-warning text-dark me-1">@a</span> }
+                @if (s.OpenRecommendations > 0) { <span class="badge bg-info text-dark">@s.OpenRecommendations open advice</span> }
+            </td>
+            <td class="text-end"><a class="btn btn-sm btn-outline-success" asp-controller="Fields" asp-action="Details" asp-route-id="@s.FieldId">Open</a></td>
+        </tr>
+    }
+    @if (Model.Count == 0)
+    {
+        <tr><td colspan="10" class="text-center text-muted">No fields to show yet.</td></tr>
+    }
+    </tbody>
+</table>
+</div>

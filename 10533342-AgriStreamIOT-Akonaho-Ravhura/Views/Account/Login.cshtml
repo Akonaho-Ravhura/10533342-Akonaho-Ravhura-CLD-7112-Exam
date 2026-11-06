@@ -1,0 +1,69 @@
+@model LoginViewModel
+@inject Microsoft.AspNetCore.Hosting.IWebHostEnvironment Env
+@inject Microsoft.Extensions.Configuration.IConfiguration Config
+@{
+    ViewData["Title"] = "Log in";
+    ViewData["HeroTitle"] = "Welcome <span class=\"glow-text\">back</span>.";
+}
+
+<div class="auth-wrap">
+    <partial name="_AuthHero" />
+
+    <section class="auth-panel">
+        <div class="eyebrow mb-2">Farmers · Agronomists · Admins</div>
+        <h2>Log in</h2>
+        <p class="text-muted mb-4">One sign-in for every user type. You'll land on your own dashboard.</p>
+
+        <form asp-action="Login" method="post" id="loginForm">
+            <input type="hidden" asp-for="ReturnUrl" />
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2" role="alert"></div>
+            <div class="mb-3">
+                <label asp-for="Email" class="form-label"></label>
+                <input asp-for="Email" class="form-control" autocomplete="username" placeholder="you@farm.co.za" autofocus />
+                <span asp-validation-for="Email" class="small"></span>
+            </div>
+            <div class="mb-3">
+                <label asp-for="Password" class="form-label"></label>
+                <input asp-for="Password" class="form-control" autocomplete="current-password" placeholder="••••••••" />
+                <span asp-validation-for="Password" class="small"></span>
+            </div>
+            <div class="form-check mb-4">
+                <input asp-for="RememberMe" class="form-check-input" />
+                <label asp-for="RememberMe" class="form-check-label text-muted"></label>
+            </div>
+            <button type="submit" class="btn btn-orange w-100 py-2">Log in</button>
+        </form>
+
+        <p class="auth-switch">New to AgriStream? <a asp-action="Register">Create an account</a></p>
+
+        @if (Env.IsDevelopment())
+        {
+            var demo = new[] { AppRoles.Farmer, AppRoles.Agronomist, AppRoles.Admin }
+                .Select(r => (Role: r, Email: Config[$"SeedUsers:{r}:Email"], Password: Config[$"SeedUsers:{r}:Password"]))
+                .Where(d => !string.IsNullOrEmpty(d.Email) && !string.IsNullOrEmpty(d.Password))
+                .ToList();
+            if (demo.Count > 0)
+            {
+                <div class="demo-accounts">
+                    <div class="mb-1">Development demo accounts (fill the form):</div>
+                    @foreach (var d in demo)
+                    {
+                        <button type="button" class="me-3" data-email="@d.Email" data-password="@d.Password">@AppRoles.DisplayName(d.Role)</button>
+                    }
+                </div>
+            }
+        }
+    </section>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.querySelectorAll('.demo-accounts button').forEach(function (b) {
+            b.addEventListener('click', function () {
+                document.getElementById('Email').value = b.dataset.email;
+                document.getElementById('Password').value = b.dataset.password;
+            });
+        });
+    </script>
+}

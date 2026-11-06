@@ -3,42 +3,71 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - _10533342_AgriStreamIOT_Akonaho_Ravhura</title>
+    <meta name="theme-color" content="#0a0a0d" />
+    <title>@ViewData["Title"] · AgriStream IoT</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" />
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/_10533342_AgriStreamIOT_Akonaho_Ravhura.styles.css" asp-append-version="true" />
 </head>
-<body>
+@{
+    var controller = ViewContext.RouteData.Values["controller"]?.ToString();
+    var action = ViewContext.RouteData.Values["action"]?.ToString();
+    string Active(string c, string? a = null) =>
+        string.Equals(controller, c, StringComparison.OrdinalIgnoreCase)
+        && (a == null || string.Equals(action, a, StringComparison.OrdinalIgnoreCase)) ? "active" : "";
+}
+<body class="@ViewData["BodyClass"]">
     <header>
-        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
-            <div class="container-fluid">
-                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">AgriStreamIOT</a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
-                        aria-expanded="false" aria-label="Toggle navigation">
+        <nav class="navbar navbar-expand-md navbar-dark app-navbar">
+            <div class="container">
+                <a class="navbar-brand brand" asp-controller="Home" asp-action="Index">
+                    <partial name="_Logo" />
+                    <span>AgriStream<span class="brand-accent">IoT</span></span>
+                </a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav"
+                        aria-controls="mainNav" aria-expanded="false" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
                 </button>
-                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
-                    <ul class="navbar-nav flex-grow-1">
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
-                        </li>
+                <div class="collapse navbar-collapse" id="mainNav">
+                    <ul class="navbar-nav me-auto">
+                        @if (User.IsInRole(AppRoles.Admin))
+                        {
+                            <li class="nav-item"><a class="nav-link @Active("Admin", "Index")" asp-controller="Admin" asp-action="Index">Dashboard</a></li>
+                            <li class="nav-item"><a class="nav-link @Active("Admin", "Users")" asp-controller="Admin" asp-action="Users">Users</a></li>
+                            <li class="nav-item"><a class="nav-link @Active("Admin", "Farms")" asp-controller="Admin" asp-action="Farms">Farms</a></li>
+                        }
+                        else if (User.IsInRole(AppRoles.Farmer))
+                        {
+                            <li class="nav-item"><a class="nav-link @Active("Farmer", "Index")" asp-controller="Farmer" asp-action="Index">My farms</a></li>
+                            <li class="nav-item"><a class="nav-link @Active("Farmer", "CreateFarm")" asp-controller="Farmer" asp-action="CreateFarm">Add farm</a></li>
+                        }
+                        else if (User.IsInRole(AppRoles.Agronomist))
+                        {
+                            <li class="nav-item"><a class="nav-link @Active("Agronomist")" asp-controller="Agronomist" asp-action="Index">Field insights</a></li>
+                        }
+                        else
+                        {
+                            <li class="nav-item"><a class="nav-link @Active("Home", "Index")" asp-controller="Home" asp-action="Index">Home</a></li>
+                        }
                     </ul>
+                    <partial name="_LoginPartial" />
                 </div>
             </div>
         </nav>
     </header>
-    <div class="container">
-        <main role="main" class="pb-3">
-            @RenderBody()
-        </main>
-    </div>
 
-    <footer class="border-top footer text-muted">
-        <div class="container">
-            &copy; 2026 - _10533342_AgriStreamIOT_Akonaho_Ravhura - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+    <main role="main" class="container app-main">
+        <partial name="_Alerts" />
+        @RenderBody()
+    </main>
+
+    <footer class="app-footer">
+        <div class="container d-flex flex-wrap justify-content-between gap-2">
+            <span>&copy; 2026 AgriStream IoT · Soil, humidity &amp; drone intelligence</span>
+            <a asp-controller="Home" asp-action="Privacy">Privacy</a>
         </div>
     </footer>
     <script src="~/lib/jquery/dist/jquery.min.js"></script>

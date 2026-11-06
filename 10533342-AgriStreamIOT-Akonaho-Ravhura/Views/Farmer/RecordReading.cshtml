@@ -1,0 +1,69 @@
+@model SensorReading
+@{
+    ViewData["Title"] = "Record sensor reading";
+    var field = (Field)ViewBag.Field;
+    var devices = (List<SelectListItem>)ViewBag.Devices;
+}
+
+<div class="row"><div class="col-lg-8">
+    <h1 class="h3 mb-1">Record sensor reading</h1>
+    <p class="text-muted">Field: @field.Name (@field.Farm?.Name). Fill in the values your sensor measures; the others are ignored.</p>
+
+    @if (devices.Count == 0)
+    {
+        <div class="alert alert-warning">This field has no active soil or humidity sensors.
+            <a asp-action="AddDevice" asp-route-fieldId="@field.Id">Register a device</a> first.</div>
+    }
+    else
+    {
+    <form asp-action="RecordReading" method="post">
+        <input type="hidden" asp-for="FieldId" />
+        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+        <div class="row">
+            <div class="col-md-7 mb-3">
+                <label asp-for="DeviceId" class="form-label">Sensor</label>
+                <select asp-for="DeviceId" asp-items="devices" class="form-select"></select>
+                <span asp-validation-for="DeviceId" class="text-danger"></span>
+            </div>
+            <div class="col-md-5 mb-3">
+                <label asp-for="RecordedAt" class="form-label"></label>
+                <input asp-for="RecordedAt" class="form-control" />
+                <span asp-validation-for="RecordedAt" class="text-danger"></span>
+            </div>
+        </div>
+
+        <fieldset class="border rounded p-3 mb-3">
+            <legend class="h6 float-none w-auto px-2">Soil sensor</legend>
+            <div class="row">
+                @foreach (var prop in new[] { "SoilDensity", "SoilMoisture", "SoilPh", "Nitrogen", "Phosphorus", "Potassium" })
+                {
+                    <div class="col-md-4 mb-3">
+                        @Html.Label(prop, null, new { @class = "form-label" })
+                        @Html.TextBox(prop, null, new { @class = "form-control", type = "number", step = "0.01" })
+                        @Html.ValidationMessage(prop, null, new { @class = "text-danger" })
+                    </div>
+                }
+            </div>
+        </fieldset>
+
+        <fieldset class="border rounded p-3 mb-3">
+            <legend class="h6 float-none w-auto px-2">Humidity sensor</legend>
+            <div class="row">
+                @foreach (var prop in new[] { "Humidity", "Temperature" })
+                {
+                    <div class="col-md-4 mb-3">
+                        @Html.Label(prop, null, new { @class = "form-label" })
+                        @Html.TextBox(prop, null, new { @class = "form-control", type = "number", step = "0.01" })
+                        @Html.ValidationMessage(prop, null, new { @class = "text-danger" })
+                    </div>
+                }
+            </div>
+        </fieldset>
+
+        <button type="submit" class="btn btn-success">Save reading</button>
+        <a class="btn btn-link" asp-controller="Fields" asp-action="Details" asp-route-id="@field.Id">Cancel</a>
+    </form>
+    }
+</div></div>
+
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }
