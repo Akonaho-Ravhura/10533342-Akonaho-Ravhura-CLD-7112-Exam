@@ -1,0 +1,57 @@
+name: Build and deploy ASP.NET Core app to Azure Web App - 10533342
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  PROJECT_PATH: 10533342-AgriStreamIOT-Akonaho-Ravhura/10533342-AgriStreamIOT-Akonaho-Ravhura.csproj
+  PUBLISH_DIR: published
+
+jobs:
+  build:
+    runs-on: windows-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore
+        run: dotnet restore "${{ env.PROJECT_PATH }}"
+
+      - name: Build
+        run: dotnet build "${{ env.PROJECT_PATH }}" --configuration Release --no-restore
+
+      - name: Publish
+        run: dotnet publish "${{ env.PROJECT_PATH }}" --configuration Release --no-build --output "${{ env.PUBLISH_DIR }}"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: webapp
+          path: ${{ env.PUBLISH_DIR }}
+
+  deploy:
+    runs-on: windows-latest
+    needs: build
+    steps:
+      - name: Download artifact from build job
+        uses: actions/download-artifact@v4
+        with:
+          name: webapp
+          path: ${{ env.PUBLISH_DIR }}
+
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: '10533342'
+          slot-name: 'Production'
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          package: ${{ env.PUBLISH_DIR }}

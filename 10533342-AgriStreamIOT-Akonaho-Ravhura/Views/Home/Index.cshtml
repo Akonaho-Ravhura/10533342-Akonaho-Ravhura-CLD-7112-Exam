@@ -1,36 +1,79 @@
-﻿@{
-    ViewData["Title"] = "Home";
+@{
+    ViewData["Title"] = "AgriStreamIOT";
+    ViewData["BodyClass"] = "page-home";
 }
 
-<section class="hero">
-    <div class="eyebrow mb-3">Precision agriculture · IoT</div>
-    <h1>Soil, sky and sensors.<br /><span class="glow-text">One clear view.</span></h1>
-    <p class="lead">AgriStream turns soil sensor, humidity and drone data from your fields into crop health and yield decisions.</p>
-    @if (User.Identity?.IsAuthenticated == true)
-    {
-        <a class="btn btn-orange btn-lg px-4" asp-controller="Account" asp-action="Dashboard">Go to my dashboard</a>
-    }
-    else
-    {
-        <a class="btn btn-orange btn-lg px-4 me-2" asp-controller="Account" asp-action="Register">Create account</a>
-        <a class="btn btn-outline-secondary btn-lg px-4" asp-controller="Account" asp-action="Login">Log in</a>
-    }
-</section>
+<div class="agri-home">
+    <section class="agri-hero">
+        <div class="agri-copy">
+            <span class="agri-eyebrow"><span class="status-dot"></span> SMART FARMING, IN REAL TIME</span>
+            <h1>Grow smarter.<br /><span>Harvest more.</span></h1>
+            <p>
+                Bring your farm’s data together. Monitor conditions, understand
+                what your crops need, and make confident decisions from one place.
+            </p>
+            <div class="d-flex flex-wrap align-items-center gap-2">
+                <a class="agri-button" href="#platform">Explore the platform <span aria-hidden="true">↗</span></a>
+                @if (User.Identity?.IsAuthenticated == true)
+                {
+                    <a class="btn btn-orange" asp-controller="Account" asp-action="Dashboard">Go to my dashboard</a>
+                }
+                else
+                {
+                    <a class="btn btn-orange" asp-controller="Account" asp-action="Register">Create account</a>
+                    <a class="btn btn-outline-secondary" asp-controller="Account" asp-action="Login">Log in</a>
+                }
+            </div>
+            <div class="agri-proof"><span>●</span> Better insights for every growing season</div>
+        </div>
 
-<div class="row g-3">
-    <div class="col-md-4"><div class="card role-card h-100"><div class="card-body p-4">
-        <div class="icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22V12M5 12c0-4 3-7 7-7s7 3 7 7"/><path d="M2 22h20"/></svg></div>
-        <h2 class="h5">Farmer</h2>
-        <p class="mb-0">Registers farms, fields and IoT devices, and records soil density, nutrients, humidity and drone images.</p>
-    </div></div></div>
-    <div class="col-md-4"><div class="card role-card h-100"><div class="card-body p-4">
-        <div class="icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg></div>
-        <h2 class="h5">Agronomist</h2>
-        <p class="mb-0">Analyses the data farmers collect and makes crop health and yield recommendations.</p>
-    </div></div></div>
-    <div class="col-md-4"><div class="card role-card h-100"><div class="card-body p-4">
-        <div class="icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></div>
-        <h2 class="h5">Administrator</h2>
-        <p class="mb-0">Manages users and their types, and assigns agronomists to farms.</p>
-    </div></div></div>
+        <div class="agri-visual" aria-label="Illustration of connected crop rows">
+            <div class="visual-glow"></div>
+            <div class="visual-label"><span class="status-dot"></span> FIELD STATUS <strong>OPTIMAL</strong></div>
+            <div class="field-art">
+                <div class="sun"></div>
+                <div class="field-line line-one"></div>
+                <div class="field-line line-two"></div>
+                <div class="field-line line-three"></div>
+                <div class="plant plant-one">✦</div>
+                <div class="plant plant-two">✦</div>
+                <div class="plant plant-three">✦</div>
+                <div class="plant plant-four">✦</div>
+                <div class="sensor"><span>◉</span><small>LIVE SENSOR</small></div>
+            </div>
+            <div class="visual-caption"><span>01 / CONNECTED AGRICULTURE</span><span>◌&nbsp; LIVE DATA</span></div>
+        </div>
+    </section>
+
+    <section class="agri-features" id="platform">
+        <div class="section-heading">
+            <span class="agri-eyebrow">THE FARM, IN FOCUS</span>
+            <h2>One clear view of <span>what matters.</span></h2>
+        </div>
+        <div class="feature-grid">
+            <article class="feature-card">
+                <span class="feature-icon">⌁</span>
+                <h3>Field insights</h3>
+                <p>Keep an eye on growing conditions with useful, easy-to-read updates.</p>
+                <span class="card-index">01</span>
+            </article>
+            <article class="feature-card">
+                <span class="feature-icon">◉</span>
+                <h3>Connected sensors</h3>
+                <p>Bring on-farm data together to better understand your fields.</p>
+                <span class="card-index">02</span>
+            </article>
+            <article class="feature-card">
+                <span class="feature-icon">↗</span>
+                <h3>Smarter decisions</h3>
+                <p>Turn changing conditions into your next practical farming move.</p>
+                <span class="card-index">03</span>
+            </article>
+        </div>
+    </section>
+
+    <div class="agri-bottom-line">
+        <span>BUILT FOR THE WAY YOU GROW</span>
+        <span>GROW WITH CONFIDENCE <b>↗</b></span>
+    </div>
 </div>
