@@ -1,8 +1,67 @@
-﻿@{
-    ViewData["Title"] = "Home Page";
+@{
+    ViewData["Title"] = "AgriStreamIOT";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<div class="agri-home">
+    <section class="agri-hero">
+        <div class="agri-copy">
+            <span class="agri-eyebrow"><span class="status-dot"></span> SMART FARMING, IN REAL TIME</span>
+            <h1>Grow smarter.<br /><span>Harvest more.</span></h1>
+            <p>
+                Bring your farm’s data together. Monitor conditions, understand
+                what your crops need, and make confident decisions from one place.
+            </p>
+            <a class="agri-button" href="#platform">Explore the platform <span aria-hidden="true">↗</span></a>
+            <div class="agri-proof"><span>●</span> Better insights for every growing season</div>
+        </div>
+
+        <div class="agri-visual" aria-label="Illustration of connected crop rows">
+            <div class="visual-glow"></div>
+            <div class="visual-label"><span class="status-dot"></span> FIELD STATUS <strong>OPTIMAL</strong></div>
+            <div class="field-art">
+                <div class="sun"></div>
+                <div class="field-line line-one"></div>
+                <div class="field-line line-two"></div>
+                <div class="field-line line-three"></div>
+                <div class="plant plant-one">✦</div>
+                <div class="plant plant-two">✦</div>
+                <div class="plant plant-three">✦</div>
+                <div class="plant plant-four">✦</div>
+                <div class="sensor"><span>◉</span><small>LIVE SENSOR</small></div>
+            </div>
+            <div class="visual-caption"><span>01 / CONNECTED AGRICULTURE</span><span>◌&nbsp; LIVE DATA</span></div>
+        </div>
+    </section>
+
+    <section class="agri-features" id="platform">
+        <div class="section-heading">
+            <span class="agri-eyebrow">THE FARM, IN FOCUS</span>
+            <h2>One clear view of <span>what matters.</span></h2>
+        </div>
+        <div class="feature-grid">
+            <article class="feature-card">
+                <span class="feature-icon">⌁</span>
+                <h3>Field insights</h3>
+                <p>Keep an eye on growing conditions with useful, easy-to-read updates.</p>
+                <span class="card-index">01</span>
+            </article>
+            <article class="feature-card">
+                <span class="feature-icon">◉</span>
+                <h3>Connected sensors</h3>
+                <p>Bring on-farm data together to better understand your fields.</p>
+                <span class="card-index">02</span>
+            </article>
+            <article class="feature-card">
+                <span class="feature-icon">↗</span>
+                <h3>Smarter decisions</h3>
+                <p>Turn changing conditions into your next practical farming move.</p>
+                <span class="card-index">03</span>
+            </article>
+        </div>
+    </section>
+
+    <div class="agri-bottom-line">
+        <span>BUILT FOR THE WAY YOU GROW</span>
+        <span>GROW WITH CONFIDENCE <b>↗</b></span>
+    </div>
 </div>
