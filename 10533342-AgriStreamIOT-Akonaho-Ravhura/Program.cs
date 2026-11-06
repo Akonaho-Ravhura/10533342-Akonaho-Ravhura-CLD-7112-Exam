@@ -13,7 +13,15 @@ var builder = WebApplication.CreateBuilder(args);
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(connectionString, sql => sql.EnableRetryOnFailure()));
+    options.UseSqlServer(connectionString, sql => sql.EnableRetryOnFailure(
+        maxRetryCount: 5,
+        maxRetryDelay: TimeSpan.FromSeconds(10),
+        errorNumbersToAdd: null)));
+
+// Migrations + seeding run in the background after startup (see DatabaseInitializer), so an
+// unreachable database can't push startup past Azure's limit (HTTP 500.37).
+builder.Services.AddSingleton<DatabaseStatus>();
+builder.Services.AddHostedService<DatabaseInitializer>();
 
 builder.Services.AddScoped<FarmAccessService>();
 
@@ -67,9 +75,6 @@ builder.Services.Configure<RequestLocalizationOptions>(options =>
 
 var app = builder.Build();
 
-// Apply migrations, create the Admin / Farmer / Agronomist roles and seed users (+ sample data).
-await DbSeeder.SeedAsync(app.Services);
-
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
@@ -86,6 +91,10 @@ app.UseRouting();
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+// Anonymous health check: reports Pending / Ready / Failed for the database initialisation.
+app.MapGet("/health", (DatabaseStatus status) => Results.Json(status.ToHealthPayload()))
+    .AllowAnonymous();
 
 app.MapControllerRoute(
     name: "default",
