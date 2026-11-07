@@ -1,6 +1,6 @@
 # AgriStream IoT
 
-ASP.NET Core 8 MVC app with three user types, backed by Azure SQL Database (SQL Server LocalDB in development).
+ASP.NET Core 8 MVC app with three user types, storing all its data in an Azure Storage account: Azure Table Storage for users, roles and farm data, Blob Storage for drone images.
 
 | User type | What they do |
 |---|---|
@@ -15,24 +15,45 @@ Public registration creates a **Farmer**. Agronomists and admins are created by 
 ```
 Models/            Entities: ApplicationUser, Farm, Field, IoTDevice, SensorReading, DroneImage, Recommendation
 Models/ViewModels/ View models for forms and dashboards
-Data/              ApplicationDbContext (EF Core + Identity), DbSeeder (roles, 3 users, sample data)
+Data/              AgriDataStore (Table Storage access), TableUserStore / TableRoleStore (Identity on Table Storage),
+                   DbSeeder (tables, roles, 3 users, sample data), DatabaseInitializer (runs the seeder after startup)
 Services/          FarmAccessService: who can see / edit which farm
 Controllers/       Account, Admin, Farmer, Agronomist, Fields (shared field data page), Home
 Views/             One folder per controller
-Migrations/        EF Core migrations for SQL Server / Azure SQL
 ```
 
 Data model: `Farm (Farmer, Agronomist?) 1─* Field 1─* IoTDevice 1─* SensorReading`, plus `Field 1─* DroneImage` and `Field 1─* Recommendation (Agronomist)`.
 
-## Run locally
+## Storage account
 
-Requires the .NET 8 runtime and SQL Server LocalDB (installed with Visual Studio).
+Everything is stored in one Azure Storage account, set in `appsettings.json`:
 
-```bash
-dotnet run --launch-profile http
+```json
+"ConnectionStrings": {
+  "StorageAccount": "DefaultEndpointsProtocol=https;AccountName=<account>;AccountKey=<key>;EndpointSuffix=core.windows.net"
+}
 ```
 
-On startup the app applies migrations and seeds (from `appsettings.Development.json`):
+Copy the value from the Azure portal: **Storage account → Security + networking → Access keys → Connection string**.
+On startup the app creates these tables (if missing) and the `drone-images` blob container:
+
+| Table | Holds | PartitionKey / RowKey |
+|---|---|---|
+| `Users` | user accounts (email, password hash, name...) | `user` / user id |
+| `Roles` | Admin, Farmer, Agronomist | `role` / role id |
+| `UserRoles` | which user has which role | user id / role name |
+| `Farms`, `Fields`, `Devices`, `DroneImages`, `Recommendations` | farm data | entity type / id |
+| `SensorReadings` | soil and humidity readings | field id / reading id |
+| `Counters` | the next id for each table | `counter` / table name |
+
+`/health` shows whether the storage account is reachable (`Pending`, `Ready` or `Failed`). While it isn't `Ready`,
+pages show a "temporarily unavailable" message instead of an error.
+
+## Run locally
+
+Requires the .NET 8 runtime. Point `ConnectionStrings:StorageAccount` at your storage account, or at the Azurite
+emulator that ships with Visual Studio (`UseDevelopmentStorage=true`). In Development the app also seeds
+(from `appsettings.Development.json`):
 
 | Role | Email | Password |
 |---|---|---|
@@ -44,10 +65,8 @@ plus a sample farm with two fields, five devices, a week of sensor readings, dro
 
 ## Drone images (Azure Blob Storage)
 
-Images are uploaded to a **private** blob container (`drone-images`, created automatically) and streamed through
-`/Fields/Image/{id}`, which checks the viewer may see that field. Configure `ConnectionStrings:BlobStorage`
-(user-secrets locally, App Service connection string in Azure). Without it, images are stored in `App_Data/drone-images`.
-For local blob testing, run Azurite (`npx -p azurite azurite-blob`) and use `UseDevelopmentStorage=true`.
+Images are uploaded to a **private** blob container (`drone-images`, created automatically) in the same storage
+account and streamed through `/Fields/Image/{id}`, which checks the viewer may see that field.
 
 ## Registration
 
@@ -55,17 +74,11 @@ Login and registration pages are shared by all user types. Farmers and agronomis
 registering as an **Admin** requires `Registration:AdminCode` (set it as a secret / App Service setting;
 if it's not set, admin sign-up is disabled).
 
-## Deploy with Azure SQL Database
+## Deploy to Azure App Service
 
-1. Create an Azure SQL server + database (e.g. `AgriStreamIoT`) and allow your App Service through the server firewall
-   ("Allow Azure services and resources to access this server").
-2. In the App Service, add a connection string named **`DefaultConnection`** (type *SQLAzure*):
-   `Server=tcp:<server>.database.windows.net,1433;Initial Catalog=AgriStreamIoT;User ID=<user>;Password=<password>;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;`
-   Do not commit the real password to `appsettings.json`.
-3. Seed users are configured, not hard-coded. Add App Service settings for the accounts you want created, e.g.
+1. Set the storage account connection string, either in `appsettings.json` or (better, so the key isn't in git) as an
+   App Service connection string named **`StorageAccount`** (type *Custom*).
+2. Seed users are configured, not hard-coded. Add App Service settings for the accounts you want created, e.g.
    `SeedUsers__Admin__Email`, `SeedUsers__Admin__Password`, `SeedUsers__Admin__FullName` (same for `Farmer` and `Agronomist`).
    Leave `SeedUsers__SampleData` as `false` in production.
-4. Deploy. Migrations run automatically on startup. To apply them manually instead:
-   `dotnet ef database update --connection "<azure connection string>"`
-
-The DbContext uses `EnableRetryOnFailure()` so transient Azure SQL faults are retried.
+3. Deploy, then open `/health` and wait for `"database":"Ready"`.

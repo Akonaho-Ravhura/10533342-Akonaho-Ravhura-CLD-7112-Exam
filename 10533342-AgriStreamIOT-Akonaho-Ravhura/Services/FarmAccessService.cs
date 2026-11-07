@@ -3,7 +3,6 @@ using _10533342_AgriStreamIOT_Akonaho_Ravhura.Data;
 using _10533342_AgriStreamIOT_Akonaho_Ravhura.Models;
 using _10533342_AgriStreamIOT_Akonaho_Ravhura.Models.ViewModels;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
 
 namespace _10533342_AgriStreamIOT_Akonaho_Ravhura.Services
 {
@@ -13,102 +12,110 @@ namespace _10533342_AgriStreamIOT_Akonaho_Ravhura.Services
     /// </summary>
     public class FarmAccessService
     {
-        private readonly ApplicationDbContext _db;
+        private readonly AgriDataStore _db;
         private readonly UserManager<ApplicationUser> _userManager;
 
-        public FarmAccessService(ApplicationDbContext db, UserManager<ApplicationUser> userManager)
+        public FarmAccessService(AgriDataStore db, UserManager<ApplicationUser> userManager)
         {
             _db = db;
             _userManager = userManager;
         }
 
-        public IQueryable<Farm> VisibleFarms(ClaimsPrincipal user)
+        /// <summary>Farms the user can see, with Farmer and Agronomist filled in.</summary>
+        public async Task<List<Farm>> VisibleFarmsAsync(ClaimsPrincipal user)
         {
             var userId = _userManager.GetUserId(user);
-            if (user.IsInRole(AppRoles.Admin)) return _db.Farms;
-            if (user.IsInRole(AppRoles.Farmer)) return _db.Farms.Where(f => f.FarmerId == userId);
-            if (user.IsInRole(AppRoles.Agronomist)) return _db.Farms.Where(f => f.AgronomistId == userId);
-            return _db.Farms.Where(_ => false);
+            var farms = await _db.ListAsync<Farm>();
+            var visible = user.IsInRole(AppRoles.Admin) ? farms
+                : user.IsInRole(AppRoles.Farmer) ? farms.Where(f => f.FarmerId == userId).ToList()
+                : user.IsInRole(AppRoles.Agronomist) ? farms.Where(f => f.AgronomistId == userId).ToList()
+                : new List<Farm>();
+            if (visible.Count > 0) await _db.AttachUsersAsync(visible);
+            return visible;
         }
 
-        public IQueryable<Field> VisibleFields(ClaimsPrincipal user)
+        /// <summary>Fields the user can see, each with its Farm (and the farm's farmer and agronomist) filled in.</summary>
+        public async Task<List<Field>> VisibleFieldsAsync(ClaimsPrincipal user)
         {
-            var farmIds = VisibleFarms(user).Select(f => f.Id);
-            return _db.Fields.Where(f => farmIds.Contains(f.FarmId));
+            var farms = (await VisibleFarmsAsync(user)).ToDictionary(f => f.Id);
+            if (farms.Count == 0) return new List<Field>();
+            var fields = (await _db.ListAsync<Field>()).Where(f => farms.ContainsKey(f.FarmId)).ToList();
+            foreach (var field in fields) field.Farm = farms[field.FarmId];
+            return fields;
         }
 
         /// <summary>Only the owning farmer may change a farm's data (fields, devices, readings, images).</summary>
         public async Task<Farm?> GetOwnedFarmAsync(ClaimsPrincipal user, int farmId)
         {
-            var userId = _userManager.GetUserId(user);
-            return await _db.Farms.FirstOrDefaultAsync(f => f.Id == farmId && f.FarmerId == userId);
+            var farm = await _db.GetAsync<Farm>(farmId);
+            return farm != null && farm.FarmerId == _userManager.GetUserId(user) ? farm : null;
         }
 
         public async Task<Field?> GetOwnedFieldAsync(ClaimsPrincipal user, int fieldId)
         {
-            var userId = _userManager.GetUserId(user);
-            return await _db.Fields.Include(f => f.Farm)
-                .FirstOrDefaultAsync(f => f.Id == fieldId && f.Farm!.FarmerId == userId);
-        }
-
-        /// <summary>Latest soil / humidity / drone / recommendation status for each field the user can see.</summary>
-        public async Task<List<FieldSummaryViewModel>> GetFieldSummariesAsync(ClaimsPrincipal user)
-        {
-            var fields = await VisibleFields(user)
-                .Include(f => f.Farm).ThenInclude(f => f!.Farmer)
-                .OrderBy(f => f.Farm!.Name).ThenBy(f => f.Name)
-                .Select(f => new { Field = f, DeviceCount = f.Devices.Count })
-                .ToListAsync();
-            var ids = fields.Select(f => f.Field.Id).ToList();
-
-            var latestSoil = await _db.SensorReadings
-                .Where(r => ids.Contains(r.FieldId) && r.SoilMoisture != null)
-                .GroupBy(r => r.FieldId)
-                .Select(g => g.OrderByDescending(r => r.RecordedAt).First())
-                .ToDictionaryAsync(r => r.FieldId);
-            var latestHumidity = await _db.SensorReadings
-                .Where(r => ids.Contains(r.FieldId) && r.Humidity != null)
-                .GroupBy(r => r.FieldId)
-                .Select(g => g.OrderByDescending(r => r.RecordedAt).First())
-                .ToDictionaryAsync(r => r.FieldId);
-            var latestImage = await _db.DroneImages
-                .Where(i => ids.Contains(i.FieldId))
-                .GroupBy(i => i.FieldId)
-                .Select(g => g.OrderByDescending(i => i.CapturedAt).First())
-                .ToDictionaryAsync(i => i.FieldId);
-            var recs = await _db.Recommendations
-                .Where(r => ids.Contains(r.FieldId))
-                .GroupBy(r => r.FieldId)
-                .Select(g => new
-                {
-                    FieldId = g.Key,
-                    Open = g.Count(r => !r.IsAcknowledged),
-                    Latest = g.OrderByDescending(r => r.CreatedAt).Select(r => (CropHealthStatus?)r.CropHealth).First()
-                })
-                .ToDictionaryAsync(r => r.FieldId);
-
-            return fields.Select(x => new FieldSummaryViewModel
-            {
-                FieldId = x.Field.Id,
-                FieldName = x.Field.Name,
-                FarmName = x.Field.Farm!.Name,
-                FarmerName = x.Field.Farm.Farmer?.FullName,
-                CropType = x.Field.CropType,
-                DeviceCount = x.DeviceCount,
-                LatestSoil = latestSoil.GetValueOrDefault(x.Field.Id),
-                LatestHumidity = latestHumidity.GetValueOrDefault(x.Field.Id),
-                LatestNdvi = latestImage.GetValueOrDefault(x.Field.Id)?.Ndvi,
-                LatestCropHealth = recs.GetValueOrDefault(x.Field.Id)?.Latest,
-                OpenRecommendations = recs.GetValueOrDefault(x.Field.Id)?.Open ?? 0
-            }).ToList();
+            var field = await GetFieldWithFarmAsync(fieldId);
+            return field?.Farm?.FarmerId == _userManager.GetUserId(user) ? field : null;
         }
 
         /// <summary>Only the agronomist assigned to the farm may advise on its fields.</summary>
         public async Task<Field?> GetAdvisedFieldAsync(ClaimsPrincipal user, int fieldId)
         {
-            var userId = _userManager.GetUserId(user);
-            return await _db.Fields.Include(f => f.Farm)
-                .FirstOrDefaultAsync(f => f.Id == fieldId && f.Farm!.AgronomistId == userId);
+            var field = await GetFieldWithFarmAsync(fieldId);
+            return field?.Farm?.AgronomistId == _userManager.GetUserId(user) ? field : null;
+        }
+
+        private async Task<Field?> GetFieldWithFarmAsync(int fieldId)
+        {
+            var field = await _db.GetAsync<Field>(fieldId);
+            if (field != null) field.Farm = await _db.GetAsync<Farm>(field.FarmId);
+            return field;
+        }
+
+        /// <summary>Latest soil / humidity / drone / recommendation status for each field the user can see.</summary>
+        public async Task<List<FieldSummaryViewModel>> GetFieldSummariesAsync(ClaimsPrincipal user)
+        {
+            var fields = (await VisibleFieldsAsync(user))
+                .OrderBy(f => f.Farm!.Name).ThenBy(f => f.Name).ToList();
+            if (fields.Count == 0) return new List<FieldSummaryViewModel>();
+            var ids = fields.Select(f => f.Id).ToHashSet();
+
+            var deviceCounts = (await _db.ListAsync<IoTDevice>())
+                .Where(d => ids.Contains(d.FieldId))
+                .GroupBy(d => d.FieldId).ToDictionary(g => g.Key, g => g.Count());
+
+            var readings = new List<SensorReading>();
+            foreach (var id in ids) readings.AddRange(await _db.ReadingsForFieldAsync(id));
+            var latestSoil = readings.Where(r => r.SoilMoisture != null).GroupBy(r => r.FieldId)
+                .ToDictionary(g => g.Key, g => g.MaxBy(r => r.RecordedAt)!);
+            var latestHumidity = readings.Where(r => r.Humidity != null).GroupBy(r => r.FieldId)
+                .ToDictionary(g => g.Key, g => g.MaxBy(r => r.RecordedAt)!);
+
+            var latestImage = (await _db.ListAsync<DroneImage>())
+                .Where(i => ids.Contains(i.FieldId)).GroupBy(i => i.FieldId)
+                .ToDictionary(g => g.Key, g => g.MaxBy(i => i.CapturedAt)!);
+
+            var recs = (await _db.ListAsync<Recommendation>())
+                .Where(r => ids.Contains(r.FieldId)).GroupBy(r => r.FieldId)
+                .ToDictionary(g => g.Key, g => new
+                {
+                    Open = g.Count(r => !r.IsAcknowledged),
+                    Latest = (CropHealthStatus?)g.MaxBy(r => r.CreatedAt)!.CropHealth
+                });
+
+            return fields.Select(f => new FieldSummaryViewModel
+            {
+                FieldId = f.Id,
+                FieldName = f.Name,
+                FarmName = f.Farm!.Name,
+                FarmerName = f.Farm.Farmer?.FullName,
+                CropType = f.CropType,
+                DeviceCount = deviceCounts.GetValueOrDefault(f.Id),
+                LatestSoil = latestSoil.GetValueOrDefault(f.Id),
+                LatestHumidity = latestHumidity.GetValueOrDefault(f.Id),
+                LatestNdvi = latestImage.GetValueOrDefault(f.Id)?.Ndvi,
+                LatestCropHealth = recs.GetValueOrDefault(f.Id)?.Latest,
+                OpenRecommendations = recs.GetValueOrDefault(f.Id)?.Open ?? 0
+            }).ToList();
         }
     }
 }

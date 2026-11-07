@@ -14,11 +14,11 @@ namespace _10533342_AgriStreamIOT_Akonaho_Ravhura.Controllers
     [Authorize(Roles = AppRoles.Agronomist)]
     public class AgronomistController : Controller
     {
-        private readonly ApplicationDbContext _db;
+        private readonly AgriDataStore _db;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly FarmAccessService _access;
 
-        public AgronomistController(ApplicationDbContext db, UserManager<ApplicationUser> userManager, FarmAccessService access)
+        public AgronomistController(AgriDataStore db, UserManager<ApplicationUser> userManager, FarmAccessService access)
         {
             _db = db;
             _userManager = userManager;
@@ -54,8 +54,7 @@ namespace _10533342_AgriStreamIOT_Akonaho_Ravhura.Controllers
             if (!ModelState.IsValid) { ViewBag.Field = field; return View(rec); }
 
             rec.CreatedAt = DateTime.UtcNow;
-            _db.Recommendations.Add(rec);
-            await _db.SaveChangesAsync();
+            await _db.AddAsync(rec);
             TempData["Success"] = $"Recommendation sent to the farmer of '{field.Farm!.Name}'.";
             return RedirectToAction("Details", "Fields", new { id = field.Id });
         }

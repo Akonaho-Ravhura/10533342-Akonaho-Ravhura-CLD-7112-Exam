@@ -1,8 +1,8 @@
 namespace _10533342_AgriStreamIOT_Akonaho_Ravhura.Data
 {
     /// <summary>
-    /// Runs migrations and seeding after the web host has started, so a slow or unreachable
-    /// database can no longer block startup (which caused HTTP 500.37 on Azure App Service).
+    /// Creates the storage tables and seeds data after the web host has started, so a slow or unreachable
+    /// storage account can no longer block startup (which caused HTTP 500.37 on Azure App Service).
     /// Retries a few times, then records the outcome in <see cref="DatabaseStatus"/>.
     /// </summary>
     public class DatabaseInitializer : BackgroundService
@@ -29,14 +29,13 @@ namespace _10533342_AgriStreamIOT_Akonaho_Ravhura.Data
             // Let the host finish starting before touching the database.
             await Task.Yield();
 
-            var connectionString = _config.GetConnectionString("DefaultConnection") ?? string.Empty;
-            if (connectionString.Contains("<your-server>", StringComparison.OrdinalIgnoreCase))
+            if (!StorageAccountSettings.IsConfigured(StorageAccountSettings.GetConnectionString(_config)))
             {
                 _logger.LogError(
-                    "ConnectionStrings:DefaultConnection still contains the '<your-server>' placeholder from appsettings.json. " +
-                    "Set the DefaultConnection connection string in the Azure App Service configuration " +
-                    "(Settings > Environment variables > Connection strings) and allow Azure services through the SQL server firewall.");
-                _status.SetFailed("Connection string is not configured (placeholder value). See application logs.");
+                    "ConnectionStrings:StorageAccount is missing or still contains a <placeholder>. Paste your storage account's " +
+                    "connection string into appsettings.json (Azure portal > Storage account > Security + networking > Access keys > " +
+                    "Connection string), or set it under the App Service's Environment variables > Connection strings.");
+                _status.SetFailed("Storage account is not configured (missing or placeholder value). See application logs.");
                 return;
             }
 
@@ -46,7 +45,7 @@ namespace _10533342_AgriStreamIOT_Akonaho_Ravhura.Data
                 try
                 {
                     _logger.LogInformation("Database initialisation attempt {Attempt}/{Max}.", attempt, MaxAttempts);
-                    await DbSeeder.SeedAsync(_services);
+                    await DbSeeder.SeedAsync(_services, stoppingToken);
                     _status.SetReady();
                     _logger.LogInformation("Database initialisation completed.");
                     return;

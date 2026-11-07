@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.EntityFrameworkCore;
+using Azure.Data.Tables;
 
 namespace _10533342_AgriStreamIOT_Akonaho_Ravhura.Controllers
 {
@@ -13,10 +13,10 @@ namespace _10533342_AgriStreamIOT_Akonaho_Ravhura.Controllers
     [Authorize(Roles = AppRoles.Admin)]
     public class AdminController : Controller
     {
-        private readonly ApplicationDbContext _db;
+        private readonly AgriDataStore _db;
         private readonly UserManager<ApplicationUser> _userManager;
 
-        public AdminController(ApplicationDbContext db, UserManager<ApplicationUser> userManager)
+        public AdminController(AgriDataStore db, UserManager<ApplicationUser> userManager)
         {
             _db = db;
             _userManager = userManager;
@@ -25,19 +25,20 @@ namespace _10533342_AgriStreamIOT_Akonaho_Ravhura.Controllers
         public async Task<IActionResult> Index([FromServices] _10533342_AgriStreamIOT_Akonaho_Ravhura.Services.IImageStorage storage)
         {
             ViewBag.Storage = storage.Description;
-            ViewBag.Database = _db.Database.GetDbConnection() is { } c ? $"{c.DataSource} / {c.Database}" : "";
-            var since = DateTime.UtcNow.AddHours(-24);
+            ViewBag.Database = _db.Description;
+            var since = new DateTimeOffset(DateTime.UtcNow.AddHours(-24));
+            var farms = await _db.ListAsync<Farm>();
             var model = new AdminDashboardViewModel
             {
                 Admins = (await _userManager.GetUsersInRoleAsync(AppRoles.Admin)).Count,
                 Farmers = (await _userManager.GetUsersInRoleAsync(AppRoles.Farmer)).Count,
                 Agronomists = (await _userManager.GetUsersInRoleAsync(AppRoles.Agronomist)).Count,
-                Farms = await _db.Farms.CountAsync(),
-                UnassignedFarms = await _db.Farms.CountAsync(f => f.AgronomistId == null),
-                Fields = await _db.Fields.CountAsync(),
-                Devices = await _db.Devices.CountAsync(),
-                ReadingsLast24h = await _db.SensorReadings.CountAsync(r => r.RecordedAt >= since),
-                Recommendations = await _db.Recommendations.CountAsync()
+                Farms = farms.Count,
+                UnassignedFarms = farms.Count(f => f.AgronomistId == null),
+                Fields = (await _db.ListAsync<Field>()).Count,
+                Devices = (await _db.ListAsync<IoTDevice>()).Count,
+                ReadingsLast24h = (await _db.ListAsync<SensorReading>(TableClient.CreateQueryFilter($"RecordedAt ge {since}"))).Count,
+                Recommendations = (await _db.ListAsync<Recommendation>()).Count
             };
             return View(model);
         }
@@ -46,10 +47,11 @@ namespace _10533342_AgriStreamIOT_Akonaho_Ravhura.Controllers
 
         public async Task<IActionResult> Users(string? role = null)
         {
-            var users = await _userManager.Users
+            var farms = await _db.ListAsync<Farm>();
+            var users = (await _db.ListUsersAsync())
                 .OrderBy(u => u.FullName)
-                .Select(u => new { User = u, FarmCount = u.OwnedFarms.Count + u.AdvisedFarms.Count })
-                .ToListAsync();
+                .Select(u => new { User = u, FarmCount = farms.Count(f => f.FarmerId == u.Id || f.AgronomistId == u.Id) })
+                .ToList();
 
             var list = new List<UserListItemViewModel>();
             foreach (var x in users)
@@ -121,7 +123,7 @@ namespace _10533342_AgriStreamIOT_Akonaho_Ravhura.Controllers
             if (user.Id == _userManager.GetUserId(User) && model.Role != AppRoles.Admin)
                 ModelState.AddModelError(nameof(model.Role), "You cannot remove your own Admin role.");
             if (currentRoles.Contains(AppRoles.Farmer) && model.Role != AppRoles.Farmer
-                && await _db.Farms.AnyAsync(f => f.FarmerId == user.Id))
+                && (await _db.ListAsync<Farm>()).Any(f => f.FarmerId == user.Id))
                 ModelState.AddModelError(nameof(model.Role), "This farmer still owns farms; they must stay a Farmer.");
 
             if (ModelState.IsValid)
@@ -138,8 +140,7 @@ namespace _10533342_AgriStreamIOT_Akonaho_Ravhura.Controllers
                         await _userManager.AddToRoleAsync(user, model.Role);
                         // An agronomist who changes type no longer advises any farm.
                         if (currentRoles.Contains(AppRoles.Agronomist))
-                            await _db.Farms.Where(f => f.AgronomistId == user.Id)
-                                .ExecuteUpdateAsync(s => s.SetProperty(f => f.AgronomistId, (string?)null));
+                            await UnassignAgronomistAsync(user.Id);
                     }
                     TempData["Success"] = $"'{user.FullName}' updated.";
                     return RedirectToAction(nameof(Users));
@@ -158,8 +159,8 @@ namespace _10533342_AgriStreamIOT_Akonaho_Ravhura.Controllers
 
             string? blocker = null;
             if (user.Id == _userManager.GetUserId(User)) blocker = "You cannot delete your own account.";
-            else if (await _db.Farms.AnyAsync(f => f.FarmerId == user.Id)) blocker = "This farmer still owns farms.";
-            else if (await _db.Recommendations.AnyAsync(r => r.AgronomistId == user.Id))
+            else if ((await _db.ListAsync<Farm>()).Any(f => f.FarmerId == user.Id)) blocker = "This farmer still owns farms.";
+            else if ((await _db.ListAsync<Recommendation>()).Any(r => r.AgronomistId == user.Id))
                 blocker = "This agronomist has recommendations on record; change their user type instead of deleting.";
             if (blocker != null)
             {
@@ -167,7 +168,8 @@ namespace _10533342_AgriStreamIOT_Akonaho_Ravhura.Controllers
                 return RedirectToAction(nameof(Users));
             }
 
-            await _userManager.DeleteAsync(user); // advised farms are unassigned via SET NULL
+            await UnassignAgronomistAsync(user.Id);
+            await _userManager.DeleteAsync(user);
             TempData["Success"] = $"'{user.FullName}' deleted.";
             return RedirectToAction(nameof(Users));
         }
@@ -176,16 +178,19 @@ namespace _10533342_AgriStreamIOT_Akonaho_Ravhura.Controllers
 
         public async Task<IActionResult> Farms()
         {
-            var farms = await _db.Farms
+            var allFarms = await _db.ListAsync<Farm>();
+            await _db.AttachUsersAsync(allFarms);
+            var fieldCounts = (await _db.ListAsync<Field>()).GroupBy(f => f.FarmId).ToDictionary(g => g.Key, g => g.Count());
+            var farms = allFarms
                 .OrderBy(f => f.Name)
                 .Select(f => new FarmListItemViewModel
                 {
                     Id = f.Id, Name = f.Name, Location = f.Location, SizeHectares = f.SizeHectares,
-                    FarmerName = f.Farmer!.FullName,
-                    AgronomistId = f.AgronomistId, AgronomistName = f.Agronomist!.FullName,
-                    FieldCount = f.Fields.Count
+                    FarmerName = f.Farmer?.FullName ?? "",
+                    AgronomistId = f.AgronomistId, AgronomistName = f.Agronomist?.FullName,
+                    FieldCount = fieldCounts.GetValueOrDefault(f.Id)
                 })
-                .ToListAsync();
+                .ToList();
 
             var agronomists = await _userManager.GetUsersInRoleAsync(AppRoles.Agronomist);
             ViewBag.Agronomists = agronomists.OrderBy(a => a.FullName)
@@ -196,7 +201,7 @@ namespace _10533342_AgriStreamIOT_Akonaho_Ravhura.Controllers
         [HttpPost, ValidateAntiForgeryToken]
         public async Task<IActionResult> AssignAgronomist(int farmId, string? agronomistId)
         {
-            var farm = await _db.Farms.FindAsync(farmId);
+            var farm = await _db.GetAsync<Farm>(farmId);
             if (farm == null) return NotFound();
 
             if (!string.IsNullOrEmpty(agronomistId))
@@ -210,9 +215,19 @@ namespace _10533342_AgriStreamIOT_Akonaho_Ravhura.Controllers
             }
 
             farm.AgronomistId = string.IsNullOrEmpty(agronomistId) ? null : agronomistId;
-            await _db.SaveChangesAsync();
+            await _db.UpdateAsync(farm);
             TempData["Success"] = $"Agronomist for '{farm.Name}' updated.";
             return RedirectToAction(nameof(Farms));
+        }
+
+        /// <summary>Removes an agronomist from every farm they advise.</summary>
+        private async Task UnassignAgronomistAsync(string userId)
+        {
+            foreach (var farm in (await _db.ListAsync<Farm>()).Where(f => f.AgronomistId == userId))
+            {
+                farm.AgronomistId = null;
+                await _db.UpdateAsync(farm);
+            }
         }
 
         private void PopulateRoles() =>

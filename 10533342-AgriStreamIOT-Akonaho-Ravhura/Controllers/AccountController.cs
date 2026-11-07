@@ -1,3 +1,4 @@
+using _10533342_AgriStreamIOT_Akonaho_Ravhura.Data;
 using _10533342_AgriStreamIOT_Akonaho_Ravhura.Models;
 using _10533342_AgriStreamIOT_Akonaho_Ravhura.Models.ViewModels;
 using System.Security.Cryptography;
@@ -13,12 +14,28 @@ namespace _10533342_AgriStreamIOT_Akonaho_Ravhura.Controllers
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly IConfiguration _config;
+        private readonly DatabaseStatus _dbStatus;
 
-        public AccountController(UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager, IConfiguration config)
+        public AccountController(UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager,
+            IConfiguration config, DatabaseStatus dbStatus)
         {
             _userManager = userManager;
             _signInManager = signInManager;
             _config = config;
+            _dbStatus = dbStatus;
+        }
+
+        /// <summary>
+        /// Fails fast with a friendly message when the database isn't initialised yet, instead of
+        /// letting the request hang on connection retries and then throw.
+        /// </summary>
+        private bool DatabaseUnavailable()
+        {
+            if (_dbStatus.State == DatabaseState.Ready) return false;
+            ModelState.AddModelError(string.Empty, _dbStatus.State == DatabaseState.Pending
+                ? "The service is still starting up. Please try again in a minute."
+                : "The service is temporarily unavailable. Please try again later.");
+            return true;
         }
 
         [HttpGet, AllowAnonymous]
@@ -31,7 +48,7 @@ namespace _10533342_AgriStreamIOT_Akonaho_Ravhura.Controllers
         [HttpPost, AllowAnonymous, ValidateAntiForgeryToken]
         public async Task<IActionResult> Login(LoginViewModel model)
         {
-            if (!ModelState.IsValid) return View(model);
+            if (!ModelState.IsValid || DatabaseUnavailable()) return View(model);
 
             var result = await _signInManager.PasswordSignInAsync(model.Email, model.Password, model.RememberMe, lockoutOnFailure: true);
             if (result.Succeeded)
@@ -71,7 +88,7 @@ namespace _10533342_AgriStreamIOT_Akonaho_Ravhura.Controllers
                     ? "The admin registration code is not correct."
                     : "Admin registration is disabled. Ask an existing administrator to create your account.");
 
-            if (!ModelState.IsValid) return View(model);
+            if (!ModelState.IsValid || DatabaseUnavailable()) return View(model);
 
             var user = new ApplicationUser { UserName = model.Email, Email = model.Email, FullName = model.FullName };
             var result = await _userManager.CreateAsync(user, model.Password);

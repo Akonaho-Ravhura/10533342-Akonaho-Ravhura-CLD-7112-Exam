@@ -4,7 +4,7 @@ namespace _10533342_AgriStreamIOT_Akonaho_Ravhura.Models
 {
     /// <summary>
     /// A picture of a field taken by a drone. The image file lives in Azure Blob Storage
-    /// (<see cref="BlobName"/>); SQL only stores its metadata. <see cref="ImageUrl"/> is kept
+    /// (<see cref="BlobName"/>); Azure Table Storage holds its details. <see cref="ImageUrl"/> is kept
     /// for images hosted elsewhere.
     /// </summary>
     public class DroneImage

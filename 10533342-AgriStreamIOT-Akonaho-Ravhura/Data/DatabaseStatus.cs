@@ -36,7 +36,7 @@ namespace _10533342_AgriStreamIOT_Akonaho_Ravhura.Data
             lock (_lock)
             {
                 State = DatabaseState.Ready;
-                Message = "Database migrated and seeded.";
+                Message = "Storage tables ready and seeded.";
                 LastUpdatedUtc = DateTimeOffset.UtcNow;
             }
         }
