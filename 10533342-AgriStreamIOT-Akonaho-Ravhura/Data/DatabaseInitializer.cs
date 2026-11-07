@@ -48,6 +48,7 @@ namespace _10533342_AgriStreamIOT_Akonaho_Ravhura.Data
                     await DbSeeder.SeedAsync(_services, stoppingToken);
                     _status.SetReady();
                     _logger.LogInformation("Database initialisation completed.");
+                    await SeedDemoDataAsync(stoppingToken);
                     return;
                 }
                 catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
@@ -72,6 +73,26 @@ namespace _10533342_AgriStreamIOT_Akonaho_Ravhura.Data
                 {
                     return;
                 }
+            }
+        }
+
+        /// <summary>
+        /// Demo farmers, farms, fields, devices and drone images. Runs after the site is already Ready,
+        /// so a problem here is logged but never takes the site down.
+        /// </summary>
+        private async Task SeedDemoDataAsync(CancellationToken stoppingToken)
+        {
+            try
+            {
+                using var scope = _services.CreateScope();
+                await scope.ServiceProvider.GetRequiredService<DemoDataSeeder>().SeedAsync(stoppingToken);
+            }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Demo data seeding failed. It will be tried again on the next start.");
             }
         }
     }

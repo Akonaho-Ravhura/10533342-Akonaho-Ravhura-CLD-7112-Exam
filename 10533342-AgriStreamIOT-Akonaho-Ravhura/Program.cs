@@ -5,8 +5,24 @@ using System.Globalization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Localization;
 using Azure.Data.Tables;
+using Microsoft.Extensions.Configuration.Json;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// appsettings.Local.json holds your own secrets (the storage account key). It is git-ignored and never
+// published. It loads right after the appsettings*.json files, so Azure App Service settings
+// (environment variables) still take priority over it.
+var settingsSources = builder.Configuration.Sources;
+var lastJsonSource = settingsSources.ToList().FindLastIndex(s =>
+    s is JsonConfigurationSource { Path: not null } json && json.Path.StartsWith("appsettings", StringComparison.OrdinalIgnoreCase));
+var localSettings = new JsonConfigurationSource
+{
+    Path = "appsettings.Local.json",
+    Optional = true,
+    ReloadOnChange = true,
+    FileProvider = builder.Environment.ContentRootFileProvider
+};
+settingsSources.Insert(lastJsonSource + 1, localSettings);
 
 // All data (users, roles, farms, fields, devices, readings, drone image details, recommendations)
 // lives in Azure Table Storage; drone image files go to Blob Storage in the same storage account.
@@ -20,6 +36,7 @@ builder.Services.AddSingleton<AgriDataStore>();
 // unreachable storage account can't push startup past Azure's limit (HTTP 500.37).
 builder.Services.AddSingleton<DatabaseStatus>();
 builder.Services.AddHostedService<DatabaseInitializer>();
+builder.Services.AddScoped<DemoDataSeeder>(); // 5 demo farmers with farms, fields, devices and drone images
 
 builder.Services.AddScoped<FarmAccessService>();
 

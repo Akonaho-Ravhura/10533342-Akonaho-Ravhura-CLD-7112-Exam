@@ -13,4 +13,9 @@
     <PackageReference Include="Azure.Storage.Blobs" Version="12.22.2" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Your own secrets (storage key): never copied to the build or publish output. -->
+    <Content Update="appsettings.Local.json" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never" />
+  </ItemGroup>
+
 </Project>
